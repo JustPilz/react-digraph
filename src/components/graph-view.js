@@ -697,9 +697,7 @@ class GraphView extends Component {
   };
 
   wrap = (text, width) => {
-    console.log('inner text', text);
     text.each(function() {
-      console.log('this', this);
       var text = d3.select(this),
         words = text
           .text()
