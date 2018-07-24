@@ -257,6 +257,8 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -803,22 +805,63 @@ var GraphView = function (_Component) {
       return d === selected ? _this.state.styles.text.selectedString : _this.state.styles.text.baseString;
     };
 
-    _this.wrap = function (text, width) {
-      console.log('inner text', text);
+    _this.wrap = function (text, width, maxLineCount) {
       text.each(function () {
-        console.log('this', this);
         var text = d3.select(this),
             words = text.text().split(/\s+/).reverse(),
             word,
+            w,
+            temp_line = [],
             line = [],
-            lineNumber = 0,
-            lineHeight = 1.1,
+            lineNumber = 1,
+            lineCount = 0,
+            lineHeight = 1.0,
             // ems
         x = text.attr('x'),
             y = text.attr('y'),
-            dy = -0.5,
-            //parseFloat(text.attr("dy")),
-        tspan = text.text(null).append('tspan').attr('x', x).attr('y', y).attr('dy', dy + 'em');
+            dy = 0.25; //parseFloat(text.attr("dy")),
+
+        var tspanCount = text.text(null).append('tspan').attr('x', x).attr('y', y).attr('dy', dy + 'em');
+
+        var temp_words = [].concat(_toConsumableArray(words));
+
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+          for (var _iterator = temp_words[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var _w = _step.value;
+
+            temp_line.push(_w);
+            tspanCount.text(temp_line.join(' '));
+            if (tspanCount.node().getComputedTextLength() > width) {
+              temp_line = [_w];
+              lineCount += 1;
+              if (lineCount == maxLineCount) {
+                break;
+              }
+            }
+          }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
+          }
+        }
+
+        tspanCount.remove();
+
+        var tspan = text.text(null).append('tspan').attr('x', x).attr('y', y).attr('dy', lineCount * -0.5 + dy + 'em');
+
         while (word = words.pop()) {
           line.push(word);
           tspan.text(line.join(' '));
@@ -826,13 +869,63 @@ var GraphView = function (_Component) {
             line.pop();
             tspan.text(line.join(' '));
             line = [word];
+
+            tspan = text.append('tspan').attr('x', 0).attr('y', y).attr('line', lineNumber).attr('dy', lineHeight + dy + 'em').text(word);
             lineNumber += 1;
-            tspan = text.append('tspan').attr('x', 0).attr('y', y).attr('dy', lineHeight + 'em').text(word);
           }
         }
-
-        if (lineNumber == 0) tspan.attr('dy', '0.5em');
       });
+
+      /*
+        text.each(function() {
+        var text = d3.select(this),
+          words = text
+            .text()
+            .split(/\s+/)
+            .reverse();
+          let word,
+          line = [],
+          lines = [];
+        let lineNumber = 0;
+        let lineHeight = 1.1; // ems
+        let x = text.attr('x');
+        let y = text.attr('y');
+        let dy = 0; //parseFloat(text.attr("dy")),
+          // записываем в tspan обьект
+        let tspan = text
+          .text(null)
+          .append('tspan')
+          .attr('x', x)
+          .attr('y', y)
+          .attr('dy', dy + 'em');
+          console.log('words', words);
+        while ((word = words.pop())) {
+          line.push(word); // добавим в line слово
+          tspan.text(line.join(' ')); // переведём массив в текст
+          if (tspan.node().getComputedTextLength() > width) {
+            // найдём ширину, если она больше, то выполним
+            line.pop(); // уберём последнее слово из line
+            lines.push(line.join(' '));
+            line = [word]; // создадим новый массив line с одним словом
+            lineNumber += 1; // увеличим счётчик строк
+          }
+        }
+          console.log('text by lines', lines);
+        console.log('lineNumber', lineNumber);
+          dy = lineNumber * -0.5;
+        console.log('dy', dy);
+        //tspans.forEach((item) => {
+        //  tspan = item;
+        //});
+          /*
+         tspan = text
+           .append('tspan')
+           .attr('x', 0)
+           .attr('y', y)
+           .attr('dy', dy + 'em')
+           //.text(word);
+          tspan.text();
+          });*/
     };
 
     _this.renderNodeText = function (d, domNode) {
@@ -850,12 +943,11 @@ var GraphView = function (_Component) {
       var el = d3Node.append('text').attr('text-anchor', 'middle').attr('style', style).style('font-size', '15px');
 
       if (title) {
-        // User defined/secondary text
         el.append('tspan').text(titleText).attr('x', 0);
 
         //el.append('title').text(title);
 
-        el.call(_this.wrap, 120);
+        el.call(_this.wrap, _this.props.maxTextWidth, _this.props.maxLineCount);
       }
     };
 
@@ -1623,7 +1715,7 @@ var sample = {
     subtype: SPECIAL_CHILD_SUBTYPE
   }, {
     id: 3,
-    title: 'Node C',
+    title: '111111 2222222 3333333333333 44444444444 5555555555 6666666666',
     x: 237.5757598876953,
     y: 61.81818389892578,
     type: EMPTY_TYPE
@@ -1859,7 +1951,9 @@ var Graph = exports.Graph = function (_Component) {
           onCreateEdge: this.onCreateEdge,
           onSwapEdge: this.onSwapEdge,
           onDeleteEdge: this.onDeleteEdge,
-          maxTitleChars: 50
+          maxTitleChars: 80,
+          maxTextWidth: 120,
+          maxLineCount: 5
         })
       );
     }

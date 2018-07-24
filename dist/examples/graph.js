@@ -92,7 +92,7 @@ var sample = {
     subtype: SPECIAL_CHILD_SUBTYPE
   }, {
     id: 3,
-    title: 'Node C',
+    title: '111111 2222222 3333333333333 44444444444 5555555555 6666666666',
     x: 237.5757598876953,
     y: 61.81818389892578,
     type: EMPTY_TYPE
@@ -328,7 +328,9 @@ var Graph = exports.Graph = function (_Component) {
           onCreateEdge: this.onCreateEdge,
           onSwapEdge: this.onSwapEdge,
           onDeleteEdge: this.onDeleteEdge,
-          maxTitleChars: 50
+          maxTitleChars: 80,
+          maxTextWidth: 120,
+          maxLineCount: 5
         })
       );
     }

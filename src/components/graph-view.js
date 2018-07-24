@@ -696,7 +696,7 @@ class GraphView extends Component {
       : this.state.styles.text.baseString;
   };
 
-  wrap = (text, width) => {
+  wrap = (text, width, maxLineCount) => {
     text.each(function() {
       var text = d3.select(this),
         words = text
@@ -704,18 +704,45 @@ class GraphView extends Component {
           .split(/\s+/)
           .reverse(),
         word,
+        w,
+        temp_line = [],
         line = [],
-        lineNumber = 0,
-        lineHeight = 1.1, // ems
+        lineNumber = 1,
+        lineCount = 0,
+        lineHeight = 1.0, // ems
         x = text.attr('x'),
         y = text.attr('y'),
-        dy = -0.5, //parseFloat(text.attr("dy")),
-        tspan = text
-          .text(null)
-          .append('tspan')
-          .attr('x', x)
-          .attr('y', y)
-          .attr('dy', dy + 'em');
+        dy = 0.25; //parseFloat(text.attr("dy")),
+
+      var tspanCount = text
+        .text(null)
+        .append('tspan')
+        .attr('x', x)
+        .attr('y', y)
+        .attr('dy', dy + 'em');
+
+      let temp_words = [...words];
+
+      for (let w of temp_words) {
+        temp_line.push(w);
+        tspanCount.text(temp_line.join(' '));
+        if (tspanCount.node().getComputedTextLength() > width) {
+          temp_line = [w];
+          lineCount += 1;
+          if (lineCount == maxLineCount) {
+            break;
+          }
+        }
+      }
+      tspanCount.remove();
+
+      var tspan = text
+        .text(null)
+        .append('tspan')
+        .attr('x', x)
+        .attr('y', y)
+        .attr('dy', lineCount * -0.5 + dy + 'em');
+
       while ((word = words.pop())) {
         line.push(word);
         tspan.text(line.join(' '));
@@ -723,18 +750,78 @@ class GraphView extends Component {
           line.pop();
           tspan.text(line.join(' '));
           line = [word];
-          lineNumber += 1;
+
           tspan = text
             .append('tspan')
             .attr('x', 0)
             .attr('y', y)
-            .attr('dy', lineHeight + 'em')
+            .attr('line', lineNumber)
+            .attr('dy', lineHeight + dy + 'em')
             .text(word);
+          lineNumber += 1;
+        }
+      }
+    });
+
+    /*
+
+    text.each(function() {
+      var text = d3.select(this),
+        words = text
+          .text()
+          .split(/\s+/)
+          .reverse();
+
+      let word,
+        line = [],
+        lines = [];
+      let lineNumber = 0;
+      let lineHeight = 1.1; // ems
+      let x = text.attr('x');
+      let y = text.attr('y');
+      let dy = 0; //parseFloat(text.attr("dy")),
+
+      // записываем в tspan обьект
+      let tspan = text
+        .text(null)
+        .append('tspan')
+        .attr('x', x)
+        .attr('y', y)
+        .attr('dy', dy + 'em');
+
+      console.log('words', words);
+      while ((word = words.pop())) {
+        line.push(word); // добавим в line слово
+        tspan.text(line.join(' ')); // переведём массив в текст
+        if (tspan.node().getComputedTextLength() > width) {
+          // найдём ширину, если она больше, то выполним
+          line.pop(); // уберём последнее слово из line
+          lines.push(line.join(' '));
+          line = [word]; // создадим новый массив line с одним словом
+          lineNumber += 1; // увеличим счётчик строк
         }
       }
 
-      if (lineNumber == 0) tspan.attr('dy', '0.5em');
-    });
+      console.log('text by lines', lines);
+      console.log('lineNumber', lineNumber);
+
+      dy = lineNumber * -0.5;
+      console.log('dy', dy);
+      //tspans.forEach((item) => {
+      //  tspan = item;
+      //});
+
+      /*
+       tspan = text
+         .append('tspan')
+         .attr('x', 0)
+         .attr('y', y)
+         .attr('dy', dy + 'em')
+         //.text(word);
+        tspan.text();
+
+
+    });*/
   };
 
   // Renders 'node.title' into node element
@@ -767,7 +854,7 @@ class GraphView extends Component {
 
       //el.append('title').text(title);
 
-      el.call(this.wrap, 120);
+      el.call(this.wrap, this.props.maxTextWidth, this.props.maxLineCount);
     }
   };
 
